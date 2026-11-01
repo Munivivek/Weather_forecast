@@ -1,0 +1,23 @@
+require("dotenv").config();
+const express = require("express");
+const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const connectDB = require("./src/config/db");
+const weather = require("./src/routes/weather");
+const saved = require("./src/routes/saved");
+const history = require("./src/routes/history");
+const app = express();
+app.use(helmet({contentSecurityPolicy:false}));
+app.use(express.json({limit:"20kb"}));
+app.use(express.static(path.join(__dirname,"public")));
+app.use("/api",rateLimit({windowMs:15*60*1000,limit:100}));
+app.get("/api/health",(_req,res)=>res.json({status:"ok",service:"Weather Intelligence API"}));
+app.use("/api/weather",weather);
+app.use("/api/saved-cities",saved);
+app.use("/api/history",history);
+app.get("/{*splat}",(_req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.use((err,_req,res,_next)=>{console.error(err);res.status(err.status||500).json({message:err.status?err.message:"Server error. Check server logs."});});
+async function start(){try{await connectDB();const port=process.env.PORT||3000;app.listen(port,()=>console.log(`Running at http://localhost:${port}`));}catch(e){console.error("Startup failed:",e.message);process.exit(1);}}
+if(require.main===module)start();
+module.exports=app;

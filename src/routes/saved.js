@@ -1,0 +1,5 @@
+const router=require("express").Router();const City=require("../models/SavedCity");
+router.get("/",async(_req,res,next)=>{try{res.json(await City.find().sort({createdAt:-1}).lean());}catch(e){next(e);}});
+router.post("/",async(req,res,next)=>{try{const {name,country="",lat,lon}=req.body;if(!name||!Number.isFinite(Number(lat))||!Number.isFinite(Number(lon))||Number(lat)<-90||Number(lat)>90||Number(lon)<-180||Number(lon)>180)return res.status(400).json({message:"City name and valid coordinates are required."});const city=await City.findOneAndUpdate({lat:Number(lat),lon:Number(lon)},{name:String(name).trim().slice(0,80),country:String(country).slice(0,5),lat:Number(lat),lon:Number(lon)},{upsert:true,new:true,runValidators:true});res.status(201).json(city);}catch(e){next(e);}});
+router.delete("/:id",async(req,res,next)=>{try{const city=await City.findByIdAndDelete(req.params.id);if(!city)return res.status(404).json({message:"Saved city not found."});res.json({message:"Removed"});}catch(e){next(e);}});
+module.exports=router;
